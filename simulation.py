@@ -26,8 +26,9 @@ class Simulation:
         self.__spectator = None
 
     def init(self):
+        client_timeout = self.__simulation_config["client_timeout"]
         self.__client = carla.Client("localhost", 2000)
-        self.__client.set_timeout(10.0)
+        self.__client.set_timeout(client_timeout)
 
         self.__world = self.__client.load_world(self.__scenario_config["map"])
 
@@ -35,8 +36,13 @@ class Simulation:
 
         self.__blueprint_library = self.__world.get_blueprint_library()
 
+        spectator_height = self.__simulation_config["spectator_height"]
         self.__spectator = self.__world.get_spectator()
-        spectator_transform = carla.Transform(self.__spawn_center)
+        spectator_location = carla.Location(x=self.__spawn_center.x,
+                                            y=self.__spawn_center.y,
+                                            z=spectator_height)
+        spectator_rotation = carla.Rotation(pitch=-90)
+        spectator_transform = carla.Transform(spectator_location, spectator_rotation)
         self.__spectator.set_transform(spectator_transform)
 
     def set_weather(self):
