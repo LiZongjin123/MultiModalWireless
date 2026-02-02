@@ -1,12 +1,10 @@
 import os
+import time
 import carla
 import yaml
 from cav import Cav
 
 class Simulation:
-    # blueprint_library = None
-    # SAVE_DIR_PATH = None
-
     def __init__(self, config_path):
         self.__world = None
         self.__client = None
@@ -67,3 +65,41 @@ class Simulation:
         cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"], self.__save_dir_path)
         cav.init()
         self.__cavs.append(cav)
+
+    def set_running_mode(self, is_synchronous_mode):
+        settings = self.__world.get_settings()
+        if is_synchronous_mode:
+            frame_rate = self.__simulation_config["frame_rate"]
+            settings.fixed_delta_seconds = 1.0 / frame_rate
+            settings.synchronous_mode = True
+        else:
+            settings.synchronous_mode = False
+        self.__world.apply_settings(settings)
+
+    def __warmup(self):
+        for cav in self.__cavs:
+            cav.warmup()
+
+    def __save_data(self):
+        for cav in self.__cavs:
+            cav.save_image()
+
+    def run_in_synchronous_mode(self):
+        warmup_seconds = self.__simulation_config["warmup_seconds"]
+        duration_seconds = self.__simulation_config["duration_seconds"]
+        queue_timeout = self.__simulation_config["queue_timeout"]
+        start_time = time.time()
+        while time.time() - start_time < warmup_seconds:
+            self.__world.tick(seconds=queue_timeout)
+            self.__warmup()
+        start_time = time.time()
+        while time.time() - start_time < duration_seconds:
+            frame_id = self.__world.tick(seconds=queue_timeout)
+            self.__save_data()
+            print(f"frame_id: {frame_id}")
+        print(f"完成数据采集，数据存储在 {self.__save_dir_path}")
+
+    def destroy_resource(self):
+        for cav in self.__cavs:
+            cav.destroy()
+    

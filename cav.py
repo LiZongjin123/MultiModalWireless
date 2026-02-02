@@ -1,5 +1,6 @@
 import os
 import carla
+import queue
 
 class Cav:
     def __init__(self, vehicle, index, sensors_config, root_dir_path):
@@ -9,10 +10,17 @@ class Cav:
         self.__sensors = {}
         self.__save_dir_path = root_dir_path + f"/cav{index}"
         self.__sensors_config = sensors_config
+        self.image_queues = [queue.Queue() for _ in range(0, 4)]
 
     def init(self):
         os.makedirs(self.__save_dir_path, exist_ok=True)
         self.__attach_cameras(self.__sensors_config["cav"]["camera"])
+
+    def destroy(self):
+        for sensor in self.__sensors.values():
+            sensor.stop()
+            sensor.destroy()
+        self.__vehicle.destroy()
 
     def __attach_camera(self, index, camera_config):
         carla_location = carla.Location(x=camera_config["transforms"][f"camera{index}"]["location"]["x"],
@@ -27,12 +35,19 @@ class Cav:
             camera_blueprint.set_attribute(key, str(value))
 
         camera = self.__world.spawn_actor(camera_blueprint, camera_transform, attach_to=self.__vehicle)
-        camera.listen(lambda image, idx=index: self.__save_image(image, idx))
+        camera.listen(self.image_queues[index].put)
         self.__sensors[f"camera{index}"] = camera
 
-    def __save_image(self, image, index):
-        image.save_to_disk(f"{self.__save_dir_path}/{image.frame}_camera{index}.png")
+    def save_image(self):
+        for i in range(0, 4):
+            image = self.image_queues[i].get()
+            image.save_to_disk(f"{self.__save_dir_path}/{image.frame}_camera{i}.png")
+
+    def warmup(self):
+        for i in range(0, 4):
+            image = self.image_queues[i].get()
 
     def __attach_cameras(self, camera_config):
         for index in range(0, 4):
             self.__attach_camera(index, camera_config)
+
