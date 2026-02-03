@@ -14,7 +14,9 @@ class Cav:
 
     def init(self):
         os.makedirs(self.__save_dir_path, exist_ok=True)
-        self.__attach_cameras(self.__sensors_config["cav"]["camera"])
+        is_world_synchronous = self.__world.get_settings().synchronous_mode
+        if is_world_synchronous:
+            self.__attach_sensors()
 
     def destroy(self):
         for sensor in self.__sensors.values():
@@ -50,4 +52,10 @@ class Cav:
     def __attach_cameras(self, camera_config):
         for index in range(0, 4):
             self.__attach_camera(index, camera_config)
+
+    def set_autopilot(self, is_enabled, *args, **kwargs):
+        self.__vehicle.set_autopilot(is_enabled, *args, **kwargs)
+
+    def __attach_sensors(self):
+        self.__attach_cameras(self.__sensors_config["cav"]["camera"])
 

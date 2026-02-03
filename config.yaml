@@ -4,8 +4,8 @@ scenario: "Town03_gastation"
 simulation:
   seed: 40
   frame_rate: 100
-  warmup_seconds: 0.7
-  duration_seconds: 8
+  warmup_seconds: 0.05
+  duration_seconds: 0.1
   queue_timeout: 60.0
   executor_workers: 16
   client_timeout: 20.0

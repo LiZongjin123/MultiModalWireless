@@ -1,11 +1,11 @@
 import os
-import time
 import carla
 import yaml
 from cav import Cav
 
 class Simulation:
     def __init__(self, config_path):
+        self.__traffic_manager = None
         self.__world = None
         self.__client = None
         with open(config_path, "r") as f:
@@ -19,6 +19,7 @@ class Simulation:
         self.__save_dir_path = "./" + self.__config["output"]["root_dir_template"].format(scenario_name=scenario_name,
                                                                                           seed=self.__seed)
         self.__blueprint_library = None
+        self.__vehicles = []
         self.__cavs = []
         self.__spawn_center = carla.Location(x=self.__scenario_config["spawn_center"]["x"],
                                              y=self.__scenario_config["spawn_center"]["y"],
@@ -45,6 +46,12 @@ class Simulation:
         spectator_transform = carla.Transform(spectator_location, spectator_rotation)
         self.__spectator.set_transform(spectator_transform)
 
+        self.__traffic_manager = self.__client.get_trafficmanager(8000)
+        self.__traffic_manager.set_random_device_seed(self.__seed)
+        # self.__traffic_manager.set_global_distance_to_leading_vehicle(2.5)
+        # self.__traffic_manager.global_percentage_speed_difference(10)  # 全局车速90%
+        # self.__traffic_manager.set_global_distance_to_leading_vehicle(2.5)  # 全局跟车距离2.5米
+
     def set_weather(self):
         weather_config = self.__simulation_config["weather"]
         weather_para = carla.WeatherParameters()
@@ -66,6 +73,8 @@ class Simulation:
             vehicle = self.__world.spawn_actor(vehicle_blueprint, spawn_points_sorted[i])
             if i in self.__scenario_config["actors"]["desired_cav_ranks"]:
                 self.__set_cav(vehicle)
+            else:
+                self.__vehicles.append(vehicle)
 
     def __set_cav(self, vehicle):
         cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"], self.__save_dir_path)
@@ -78,9 +87,13 @@ class Simulation:
             frame_rate = self.__simulation_config["frame_rate"]
             settings.fixed_delta_seconds = 1.0 / frame_rate
             settings.synchronous_mode = True
+            self.__world.apply_settings(settings)
+            self.__traffic_manager.set_synchronous_mode(True)
         else:
             settings.synchronous_mode = False
-        self.__world.apply_settings(settings)
+            self.__world.apply_settings(settings)
+            self.__traffic_manager.set_synchronous_mode(False)
+        # self.__world.apply_settings(settings)
 
     def __warmup(self):
         for cav in self.__cavs:
@@ -94,18 +107,34 @@ class Simulation:
         warmup_seconds = self.__simulation_config["warmup_seconds"]
         duration_seconds = self.__simulation_config["duration_seconds"]
         queue_timeout = self.__simulation_config["queue_timeout"]
-        start_time = time.time()
-        while time.time() - start_time < warmup_seconds:
+        fixed_delta_seconds = self.__world.get_settings().fixed_delta_seconds
+        time = 0
+        while time < warmup_seconds:
             self.__world.tick(seconds=queue_timeout)
             self.__warmup()
-        start_time = time.time()
-        while time.time() - start_time < duration_seconds:
+            time += fixed_delta_seconds
+        time = 0
+        while time < duration_seconds:
             frame_id = self.__world.tick(seconds=queue_timeout)
             self.__save_data()
             print(f"frame_id: {frame_id}")
+            time += fixed_delta_seconds
         print(f"完成数据采集，数据存储在 {self.__save_dir_path}")
 
     def destroy_resource(self):
         for cav in self.__cavs:
             cav.destroy()
-    
+        for vehicle in self.__vehicles:
+            vehicle.destroy()
+
+    def autopilot(self, is_enabled):
+        if is_enabled:
+            for vehicle in self.__vehicles:
+                vehicle.set_autopilot(True, self.__traffic_manager.get_port())
+            for cav in self.__cavs:
+                cav.set_autopilot(True, self.__traffic_manager.get_port())
+        else:
+            for vehicle in self.__vehicles:
+                vehicle.set_autopilot(False)
+            for cav in self.__cavs:
+                cav.set_autopilot(False)
