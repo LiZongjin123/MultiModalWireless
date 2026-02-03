@@ -48,9 +48,6 @@ class Simulation:
 
         self.__traffic_manager = self.__client.get_trafficmanager(8000)
         self.__traffic_manager.set_random_device_seed(self.__seed)
-        # self.__traffic_manager.set_global_distance_to_leading_vehicle(2.5)
-        # self.__traffic_manager.global_percentage_speed_difference(10)  # 全局车速90%
-        # self.__traffic_manager.set_global_distance_to_leading_vehicle(2.5)  # 全局跟车距离2.5米
 
     def set_weather(self):
         weather_config = self.__simulation_config["weather"]
@@ -59,7 +56,7 @@ class Simulation:
             exec(f"weather_para.{key} = {value}")
         self.__world.set_weather(weather_para)
 
-    def generate_vehicles(self):
+    def generate_vehicles(self, need_cav_attach_sensors):
         spawn_points = self.__world.get_map().get_spawn_points()
         spawn_points_sorted = sorted(spawn_points, key=lambda p: p.location.distance(self.__spawn_center))
 
@@ -72,13 +69,13 @@ class Simulation:
             vehicle_blueprint = self.__blueprint_library.find(preferred_vehicles[i])
             vehicle = self.__world.spawn_actor(vehicle_blueprint, spawn_points_sorted[i])
             if i in self.__scenario_config["actors"]["desired_cav_ranks"]:
-                self.__set_cav(vehicle)
+                self.__set_cav(vehicle, need_cav_attach_sensors)
             else:
                 self.__vehicles.append(vehicle)
 
-    def __set_cav(self, vehicle):
+    def __set_cav(self, vehicle, need_cav_attach_sensors):
         cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"], self.__save_dir_path)
-        cav.init()
+        cav.init(need_cav_attach_sensors)
         self.__cavs.append(cav)
 
     def set_running_mode(self, is_synchronous_mode):
@@ -87,13 +84,11 @@ class Simulation:
             frame_rate = self.__simulation_config["frame_rate"]
             settings.fixed_delta_seconds = 1.0 / frame_rate
             settings.synchronous_mode = True
-            self.__world.apply_settings(settings)
             self.__traffic_manager.set_synchronous_mode(True)
         else:
             settings.synchronous_mode = False
-            self.__world.apply_settings(settings)
             self.__traffic_manager.set_synchronous_mode(False)
-        # self.__world.apply_settings(settings)
+        self.__world.apply_settings(settings)
 
     def __warmup(self):
         for cav in self.__cavs:
@@ -101,7 +96,7 @@ class Simulation:
 
     def __save_data(self):
         for cav in self.__cavs:
-            cav.save_image()
+            cav.save_data()
 
     def run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
