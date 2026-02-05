@@ -135,31 +135,14 @@ class Cav:
         with open(pcd_file_path, 'w', encoding='utf-8') as f:
             f.write(pcd_content)
 
-    def save_data(self, vehicles):
+    def save_data(self, vehicles, cavs):
         self.__save_image()
         self.__save_lidar_to_pcd()
-        self.__save_numeric_data_as_yaml(vehicles)
+        self.__save_numeric_data_as_yaml(vehicles, cavs)
 
-    def __save_numeric_data_as_yaml(self, vehicles):
-        all_camera_data = {}
-        for i in range(0, 4):
-            camera_name = f"camera{i}"
-            camera_transform = self.__sensors[camera_name].get_transform()
-            camera_location = camera_transform.location
-            camera_rotation = camera_transform.rotation
-            camera_data = {
-                "location": {
-                    "x": camera_location.x,
-                    "y": camera_location.y,
-                    "z": camera_location.z
-                },
-                "rotation": {
-                    "pitch": camera_rotation.pitch,
-                    "roll": camera_rotation.roll,
-                    "yaw": camera_rotation.yaw
-                }
-            }
-            all_camera_data[camera_name] = camera_data
+    # TODO:增加rsu的数据
+    def __save_numeric_data_as_yaml(self, vehicles, cavs):
+        all_camera_data = self.__generate_camera_data_of_yaml()
 
         cav_speed = self.__vehicle.get_velocity()
         cav_transform = self.__vehicle.get_transform()
@@ -177,49 +160,15 @@ class Cav:
         compass = imu_measurement.compass
 
         all_vehicle_data_except_this_cav = {}
-        for i in range(0, len(vehicles)):
-            vehicle = vehicles[i]
-            if vehicle is not self.__vehicle:
-                vehicle_color_rgb = vehicle.attributes.get("color")
-                if vehicle_color_rgb is None:
-                    vehicle_color_rgb = "None"
+        for vehicle in vehicles:
+            vehicle_data = self.__generate_vehicle_data_of_yaml(vehicle)
+            all_vehicle_data_except_this_cav[vehicle.id] = vehicle_data
 
-                vehicle_transform = vehicle.get_transform()
-                vehicle_location = vehicle_transform.location
-                vehicle_rotation = vehicle_transform.rotation
-
-                vehicle_bounding_box = vehicle.bounding_box
-                vehicle_center = vehicle_bounding_box.location
-                vehicle_extent = vehicle_bounding_box.extent
-
-                vehicle_speed_l2_norm = Cav.speed_l2_norm(vehicle.get_velocity())
-
-                vehicle_data = {
-                    "bp_id": vehicle.type_id,
-                    "color": vehicle_color_rgb,
-                    "location": {
-                        "x": vehicle_location.x,
-                        "y": vehicle_location.y,
-                        "z": vehicle_location.z
-                    },
-                    "center": {
-                        "x": vehicle_center.x,
-                        "y": vehicle_center.y,
-                        "z": vehicle_center.z
-                    },
-                    "angle": {
-                        "pitch": vehicle_rotation.pitch,
-                        "roll": vehicle_rotation.roll,
-                        "yaw": vehicle_rotation.yaw
-                    },
-                    "extent": {
-                        "x": vehicle_extent.x,
-                        "y": vehicle_extent.y,
-                        "z": vehicle_extent.z
-                    },
-                    "speed": vehicle_speed_l2_norm
-                }
-                all_vehicle_data_except_this_cav[vehicle.id] = vehicle_data
+        for cav in cavs:
+            if cav.__index == self.__index:
+                continue
+            vehicle_data = self.__generate_vehicle_data_of_yaml(cav.__vehicle)
+            all_vehicle_data_except_this_cav[cav.__vehicle.id] = vehicle_data
 
         data = {
             "actor": f"cav_{self.__index}",
@@ -281,3 +230,67 @@ class Cav:
     @staticmethod
     def speed_l2_norm(speed):
         return math.sqrt(speed.x ** 2 + speed.y ** 2 + speed.z ** 2)
+
+    def __generate_vehicle_data_of_yaml(self, vehicle):
+        vehicle_color_rgb = vehicle.attributes.get("color")
+        if vehicle_color_rgb is None:
+            vehicle_color_rgb = "None"
+
+        vehicle_transform = vehicle.get_transform()
+        vehicle_location = vehicle_transform.location
+        vehicle_rotation = vehicle_transform.rotation
+
+        vehicle_bounding_box = vehicle.bounding_box
+        vehicle_center = vehicle_bounding_box.location
+        vehicle_extent = vehicle_bounding_box.extent
+
+        vehicle_speed_l2_norm = Cav.speed_l2_norm(vehicle.get_velocity())
+
+        vehicle_data = {
+            "bp_id": vehicle.type_id,
+            "color": vehicle_color_rgb,
+            "location": {
+                "x": vehicle_location.x,
+                "y": vehicle_location.y,
+                "z": vehicle_location.z
+            },
+            "center": {
+                "x": vehicle_center.x,
+                "y": vehicle_center.y,
+                "z": vehicle_center.z
+            },
+            "angle": {
+                "pitch": vehicle_rotation.pitch,
+                "roll": vehicle_rotation.roll,
+                "yaw": vehicle_rotation.yaw
+            },
+            "extent": {
+                "x": vehicle_extent.x,
+                "y": vehicle_extent.y,
+                "z": vehicle_extent.z
+            },
+            "speed": vehicle_speed_l2_norm
+        }
+        return vehicle_data
+
+    def __generate_camera_data_of_yaml(self):
+        all_camera_data = {}
+        for i in range(0, 4):
+            camera_name = f"camera{i}"
+            camera_transform = self.__sensors[camera_name].get_transform()
+            camera_location = camera_transform.location
+            camera_rotation = camera_transform.rotation
+            camera_data = {
+                "location": {
+                    "x": camera_location.x,
+                    "y": camera_location.y,
+                    "z": camera_location.z
+                },
+                "rotation": {
+                    "pitch": camera_rotation.pitch,
+                    "roll": camera_rotation.roll,
+                    "yaw": camera_rotation.yaw
+                }
+            }
+            all_camera_data[camera_name] = camera_data
+        return all_camera_data

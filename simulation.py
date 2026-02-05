@@ -96,7 +96,7 @@ class Simulation:
 
     def __save_data(self):
         for cav in self.__cavs:
-            cav.save_data(self.__vehicles)
+            cav.save_data(self.__vehicles, self.__cavs)
 
     def run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
