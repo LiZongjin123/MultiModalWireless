@@ -1,7 +1,11 @@
 import os
 import carla
 import yaml
+
 from cav import Cav
+from rsu import Rsu
+from utils import Utils
+
 
 class Simulation:
     def __init__(self, config_path):
@@ -21,6 +25,7 @@ class Simulation:
         self.__blueprint_library = None
         self.__vehicles = []
         self.__cavs = []
+        self.__rsus = []
         self.__spawn_center = carla.Location(x=self.__scenario_config["spawn_center"]["x"],
                                              y=self.__scenario_config["spawn_center"]["y"],
                                              z=self.__scenario_config["spawn_center"]["z"])
@@ -37,7 +42,14 @@ class Simulation:
 
         self.__blueprint_library = self.__world.get_blueprint_library()
 
+        self.__set_spectator()
+
+        self.__traffic_manager = self.__client.get_trafficmanager(8000)
+        self.__traffic_manager.set_random_device_seed(self.__seed)
+
+    def __set_spectator(self):
         spectator_height = self.__simulation_config["spectator_height"]
+
         self.__spectator = self.__world.get_spectator()
         spectator_location = carla.Location(x=self.__spawn_center.x,
                                             y=self.__spawn_center.y,
@@ -45,9 +57,6 @@ class Simulation:
         spectator_rotation = carla.Rotation(pitch=-90)
         spectator_transform = carla.Transform(spectator_location, spectator_rotation)
         self.__spectator.set_transform(spectator_transform)
-
-        self.__traffic_manager = self.__client.get_trafficmanager(8000)
-        self.__traffic_manager.set_random_device_seed(self.__seed)
 
     def set_weather(self):
         weather_config = self.__simulation_config["weather"]
@@ -121,6 +130,8 @@ class Simulation:
             cav.destroy()
         for vehicle in self.__vehicles:
             vehicle.destroy()
+        for rsu in self.__rsus:
+            rsu.destroy()
 
     def autopilot(self, is_enabled):
         if is_enabled:
@@ -133,3 +144,20 @@ class Simulation:
                 vehicle.set_autopilot(False)
             for cav in self.__cavs:
                 cav.set_autopilot(False)
+
+    def __set_rsu(self, road_sign, need_attach_sensors):
+        rsu = Rsu(road_sign, len(self.__rsus), self.__config["sensors"], self.__save_dir_path)
+        rsu.init(need_attach_sensors)
+        self.__rsus.append(rsu)
+
+    def generate_rsu(self, need_attach_sensors):
+        num_rsu = self.__scenario_config["actors"]["num_rsu"]
+        rsu_transform_configs = self.__scenario_config["rsu_transform"]
+        if len(rsu_transform_configs) != num_rsu:
+            raise ValueError("rsu的数量（num_rsu）和rsu的transform（rsu_transform）数量不一样")
+
+        for i in range(0, num_rsu):
+            road_sign_blueprint = self.__blueprint_library.find("static.prop.trafficwarning")
+            rsu_transform = Utils.transform(rsu_transform_configs[i])
+            road_sign = self.__world.spawn_actor(road_sign_blueprint, rsu_transform)
+            self.__set_rsu(road_sign, need_attach_sensors)

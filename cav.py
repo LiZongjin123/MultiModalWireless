@@ -31,11 +31,11 @@ class Cav:
 
     def __attach_camera(self, index):
         camera_config = self.__sensors_config["cav"]["camera"]
-        carla_location = carla.Location(x=camera_config["transforms"][f"camera{index}"]["location"]["x"],
-                                        y=camera_config["transforms"][f"camera{index}"]["location"]["y"],
-                                        z=camera_config["transforms"][f"camera{index}"]["location"]["z"])
-        carla_rotation = carla.Rotation(yaw=camera_config["transforms"][f"camera{index}"]["rotation"]["yaw"])
-        camera_transform = carla.Transform(carla_location, carla_rotation)
+        camera_location = carla.Location(x=camera_config["transforms"][f"camera{index}"]["location"]["x"],
+                                         y=camera_config["transforms"][f"camera{index}"]["location"]["y"],
+                                         z=camera_config["transforms"][f"camera{index}"]["location"]["z"])
+        camera_rotation = carla.Rotation(yaw=camera_config["transforms"][f"camera{index}"]["rotation"]["yaw"])
+        camera_transform = carla.Transform(camera_location, camera_rotation)
 
         camera_blueprint = self.__blueprint_library.find(camera_config["blueprint"])
         camera_attributes = camera_config["attributes"]
