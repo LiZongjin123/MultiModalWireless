@@ -83,7 +83,7 @@ class Simulation:
                 self.__vehicles.append(vehicle)
 
     def __set_cav(self, vehicle, need_cav_attach_sensors):
-        cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"], self.__save_dir_path)
+        cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"]["cav"], self.__save_dir_path)
         cav.init(need_cav_attach_sensors)
         self.__cavs.append(cav)
 
@@ -106,6 +106,8 @@ class Simulation:
     def __save_data(self):
         for cav in self.__cavs:
             cav.save_data(self.__vehicles, self.__cavs)
+        for rsu in self.__rsus:
+            rsu.save_data(self.__vehicles, self.__cavs)
 
     def run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
@@ -146,7 +148,7 @@ class Simulation:
                 cav.set_autopilot(False)
 
     def __set_rsu(self, road_sign, need_attach_sensors):
-        rsu = Rsu(road_sign, len(self.__rsus), self.__config["sensors"], self.__save_dir_path)
+        rsu = Rsu(road_sign, len(self.__rsus), self.__config["sensors"]["rsu"], self.__save_dir_path)
         rsu.init(need_attach_sensors)
         self.__rsus.append(rsu)
 
@@ -158,6 +160,6 @@ class Simulation:
 
         for i in range(0, num_rsu):
             road_sign_blueprint = self.__blueprint_library.find("static.prop.trafficwarning")
-            rsu_transform = Utils.transform(rsu_transform_configs[i])
+            rsu_transform = Utils.get_transform(rsu_transform_configs[i])
             road_sign = self.__world.spawn_actor(road_sign_blueprint, rsu_transform)
             self.__set_rsu(road_sign, need_attach_sensors)

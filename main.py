@@ -1,7 +1,7 @@
 from simulation import Simulation
 
 if __name__ == "__main__":
-    is_synchronous_mode = False
+    is_synchronous_mode = True
     simulation = Simulation("./config.yaml")
     simulation.init()
     simulation.set_weather()

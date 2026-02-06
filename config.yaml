@@ -64,7 +64,7 @@ sensors:
         image_size_x: '640'
         image_size_y: '480'
         fov: '110'
-      transforms: # Names (camera0, etc.) are used for file/folder naming
+      transform: # Names (camera0, etc.) are used for file/folder naming
         camera0: { location: {x: 1.5, y: 0.0, z: 2.4}, rotation: {yaw: 0, roll: 0, pitch: 0} }
         camera1: { location: {x: -1.5, y: 0.0, z: 2.4}, rotation: {yaw: 180, roll: 0, pitch: 0} }
         camera2: { location: {x: 0.0, y: -0.7, z: 2.4}, rotation: {yaw: -90, roll: 0, pitch: 0} }
