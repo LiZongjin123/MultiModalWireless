@@ -32,3 +32,4 @@ class Utils:
     @staticmethod
     def speed_l2_norm(speed):
         return math.sqrt(speed.x ** 2 + speed.y ** 2 + speed.z ** 2)
+

@@ -2,9 +2,7 @@ import os
 import queue
 import struct
 from abc import ABC, abstractmethod
-
-import carla
-
+import yaml
 from utils import Utils
 
 class Mountable(ABC):
@@ -58,16 +56,8 @@ class Mountable(ABC):
             data = sensor_queue.get()
 
     @abstractmethod
-    def save_data(self, vehicles, cavs):
+    def save_data(self, actors):
         pass
-
-    def _camera_saving(self):
-        image = self._sensor_queues["camera"].get()
-        image.save_to_disk(f"{self._save_dir_path}/{image.frame}_camera.png")
-
-    def _depth_camera_saving(self):
-        image = self._sensor_queues["depth_camera"].get()
-        image.save_to_disk(f"{self._save_dir_path}/{image.frame}_depth_camera.png", carla.ColorConverter.LogarithmicDepth)
 
     def _lidar_saving(self):
         lidar_measurement = self._sensor_queues["lidar"].get()
@@ -100,3 +90,109 @@ class Mountable(ABC):
 
         with open(pcd_file_path, 'w', encoding='utf-8') as f:
             f.write(pcd_content)
+
+    def _yaml_data_saving(self, actors):
+        yaml_data_of_sensors = self._generate_yaml_data_of_sensors()
+        yaml_data_of_actors = self._generate_yaml_data_of_actors(actors)
+
+        frame_id = self._world.get_snapshot().frame
+
+        data = {
+            "actor": f"rsu_{self._index}",
+            "frame": frame_id,
+            "sensors": yaml_data_of_sensors,
+            "actors": yaml_data_of_actors
+        }
+
+        yaml_file_path = self._save_dir_path + f"/{frame_id}.yaml"
+        with open(yaml_file_path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    @abstractmethod
+    def _generate_yaml_data_of_sensors(self):
+        pass
+
+    @staticmethod
+    def _generate_yaml_data_of_actor_pose(transform):
+        location = transform.location
+        rotation = transform.rotation
+
+        yaml_data = {
+            "location": {
+                "x": location.x,
+                "y": location.y,
+                "z": location.z
+            },
+            "rotation": {
+                "pitch": rotation.pitch,
+                "roll": rotation.roll,
+                "yaw": rotation.yaw
+            }
+        }
+        return yaml_data
+
+    def _generate_yaml_data_of_all_sensor_poses(self):
+        yaml_data_of_all_sensor_poses = {}
+        for sensor_name, sensor in self._sensors.items():
+            sensor_transform = sensor.get_transform()
+            yaml_data_of_sensor_pose = Mountable._generate_yaml_data_of_actor_pose(sensor_transform)
+            yaml_data_of_all_sensor_poses[sensor_name] = yaml_data_of_sensor_pose
+        return yaml_data_of_all_sensor_poses
+
+    def _generate_yaml_data_of_self_actor_pose(self):
+        self_actor_transform = self._actor.get_transform()
+        yaml_data_of_self_actor_pose = Mountable._generate_yaml_data_of_actor_pose(self_actor_transform)
+        return yaml_data_of_self_actor_pose
+
+    def _generate_yaml_data_of_actor(self, actor):
+        actor_color = actor.attributes.get("color")
+        if actor_color is None:
+            actor_color = "None"
+
+        actor_transform = actor.get_transform()
+        actor_location = actor_transform.location
+        actor_rotation = actor_transform.rotation
+
+        actor_bounding_box = actor.bounding_box
+        actor_center = actor_bounding_box.location
+        actor_extent = actor_bounding_box.extent
+
+        actor_speed_l2_norm = Utils.speed_l2_norm(actor.get_velocity())
+
+        yaml_data_of_actor = {
+            "bp_id": actor.type_id,
+            "color": actor_color,
+            "location": {
+                "x": actor_location.x,
+                "y": actor_location.y,
+                "z": actor_location.z
+            },
+            "center": {
+                "x": actor_center.x,
+                "y": actor_center.y,
+                "z": actor_center.z
+            },
+            "angle": {
+                "pitch": actor_rotation.pitch,
+                "roll": actor_rotation.roll,
+                "yaw": actor_rotation.yaw
+            },
+            "extent": {
+                "x": actor_extent.x,
+                "y": actor_extent.y,
+                "z": actor_extent.z
+            },
+            "speed": actor_speed_l2_norm
+        }
+        return yaml_data_of_actor
+
+    def _generate_yaml_data_of_actors(self, actors):
+        yaml_data_of_actors = {}
+        for actor in actors:
+            if not hasattr(actor, "id"):
+                actor = actor._actor
+            if actor.id == self._actor.id:
+                continue
+            yaml_data_of_actor = self._generate_yaml_data_of_actor(actor)
+            yaml_data_of_actors[actor.id] = yaml_data_of_actor
+        return yaml_data_of_actors

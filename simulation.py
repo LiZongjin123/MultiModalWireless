@@ -6,7 +6,6 @@ from cav import Cav
 from rsu import Rsu
 from utils import Utils
 
-
 class Simulation:
     def __init__(self, config_path):
         self.__traffic_manager = None
@@ -104,10 +103,9 @@ class Simulation:
             cav.warmup()
 
     def __save_data(self):
-        for cav in self.__cavs:
-            cav.save_data(self.__vehicles, self.__cavs)
-        for rsu in self.__rsus:
-            rsu.save_data(self.__vehicles, self.__cavs)
+        actors = self.__vehicles + self.__cavs + self.__rsus
+        for actor in self.__cavs + self.__rsus:
+            actor.save_data(actors)
 
     def run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
