@@ -1,7 +1,6 @@
 import os
 import carla
 import yaml
-
 from cav import Cav
 from rsu import Rsu
 from utils import Utils
@@ -21,6 +20,8 @@ class Simulation:
 
         self.__save_dir_path = "./" + self.__config["output"]["root_dir_template"].format(scenario_name=scenario_name,
                                                                                           seed=self.__seed)
+        self.__scene_save_dir_path = self.__save_dir_path + "/scene"
+
         self.__blueprint_library = None
         self.__vehicles = []
         self.__cavs = []
@@ -38,13 +39,13 @@ class Simulation:
         self.__world = self.__client.load_world(self.__scenario_config["map"])
 
         os.makedirs(self.__save_dir_path, exist_ok=True)
+        os.makedirs(self.__scene_save_dir_path, exist_ok=True)
 
         self.__blueprint_library = self.__world.get_blueprint_library()
 
         self.__set_spectator()
 
         self.__traffic_manager = self.__client.get_trafficmanager(8000)
-        self.__traffic_manager.set_random_device_seed(self.__seed)
 
     def __set_spectator(self):
         spectator_height = self.__simulation_config["spectator_height"]
@@ -81,10 +82,31 @@ class Simulation:
             else:
                 self.__vehicles.append(vehicle)
 
-    def __set_cav(self, vehicle, need_cav_attach_sensors):
-        cav = Cav(vehicle, len(self.__cavs), self.__config["sensors"]["cav"], self.__save_dir_path)
+    def generate_rsu(self, need_attach_sensors):
+        num_rsu = self.__scenario_config["actors"]["num_rsu"]
+        rsu_transform_configs = self.__scenario_config["rsu_transform"]
+
+        if num_rsu != 1:
+            raise ValueError("只支持一个rsu")
+
+        if len(rsu_transform_configs) != num_rsu:
+            raise ValueError("rsu的数量（num_rsu）和rsu的transform（rsu_transform）数量不一样")
+
+        for i in range(0, num_rsu):
+            road_sign_blueprint = self.__blueprint_library.find("static.prop.trafficwarning")
+            rsu_transform = Utils.get_transform(rsu_transform_configs[i])
+            road_sign = self.__world.spawn_actor(road_sign_blueprint, rsu_transform)
+            self.__set_rsu(road_sign, need_attach_sensors)
+
+    def __set_cav(self, actor, need_cav_attach_sensors):
+        cav = Cav(actor, len(self.__cavs), self.__config["sensors"]["cav"], self.__save_dir_path)
         cav.init(need_cav_attach_sensors)
         self.__cavs.append(cav)
+
+    def __set_rsu(self, actor, need_attach_sensors):
+        rsu = Rsu(actor, len(self.__rsus), self.__config["sensors"]["rsu"], self.__save_dir_path)
+        rsu.init(need_attach_sensors)
+        self.__rsus.append(rsu)
 
     def set_running_mode(self, is_synchronous_mode):
         settings = self.__world.get_settings()
@@ -99,13 +121,14 @@ class Simulation:
         self.__world.apply_settings(settings)
 
     def __warmup(self):
-        for cav in self.__cavs:
-            cav.warmup()
+        for actor in self.__cavs + self.__rsus:
+            actor.warmup()
 
     def __save_data(self):
         actors = self.__vehicles + self.__cavs + self.__rsus
         for actor in self.__cavs + self.__rsus:
             actor.save_data(actors)
+        self.__scene_yaml_data_saving()
 
     def run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
@@ -126,38 +149,25 @@ class Simulation:
         print(f"完成数据采集，数据存储在 {self.__save_dir_path}")
 
     def destroy_resource(self):
-        for cav in self.__cavs:
-            cav.destroy()
-        for vehicle in self.__vehicles:
-            vehicle.destroy()
-        for rsu in self.__rsus:
-            rsu.destroy()
+        for actor in self.__vehicles + self.__cavs + self.__rsus:
+            actor.destroy()
 
     def autopilot(self, is_enabled):
         if is_enabled:
-            for vehicle in self.__vehicles:
-                vehicle.set_autopilot(True, self.__traffic_manager.get_port())
-            for cav in self.__cavs:
-                cav.set_autopilot(True, self.__traffic_manager.get_port())
+            for actor in self.__vehicles + self.__cavs:
+                actor.set_autopilot(True, self.__traffic_manager.get_port())
         else:
-            for vehicle in self.__vehicles:
-                vehicle.set_autopilot(False)
-            for cav in self.__cavs:
-                cav.set_autopilot(False)
+            for actor in self.__vehicles + self.__cavs:
+                actor.set_autopilot(False)
 
-    def __set_rsu(self, road_sign, need_attach_sensors):
-        rsu = Rsu(road_sign, len(self.__rsus), self.__config["sensors"]["rsu"], self.__save_dir_path)
-        rsu.init(need_attach_sensors)
-        self.__rsus.append(rsu)
+    def __scene_yaml_data_saving(self):
+        frame_id = self.__world.get_snapshot().frame
+        actors = Utils.generate_yaml_data_of_actors(self.__vehicles + self.__cavs + self.__rsus)
+        yaml_data = {
+            "frame": frame_id,
+            "actors": actors
+        }
 
-    def generate_rsu(self, need_attach_sensors):
-        num_rsu = self.__scenario_config["actors"]["num_rsu"]
-        rsu_transform_configs = self.__scenario_config["rsu_transform"]
-        if len(rsu_transform_configs) != num_rsu:
-            raise ValueError("rsu的数量（num_rsu）和rsu的transform（rsu_transform）数量不一样")
-
-        for i in range(0, num_rsu):
-            road_sign_blueprint = self.__blueprint_library.find("static.prop.trafficwarning")
-            rsu_transform = Utils.get_transform(rsu_transform_configs[i])
-            road_sign = self.__world.spawn_actor(road_sign_blueprint, rsu_transform)
-            self.__set_rsu(road_sign, need_attach_sensors)
+        yaml_file_path = self.__scene_save_dir_path + f"/{frame_id}.yaml"
+        with open(yaml_file_path, "w", encoding="utf-8") as f:
+            yaml.dump(yaml_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
