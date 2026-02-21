@@ -7,7 +7,7 @@ class Rsu(Mountable):
 
     def __init__(self, actor, index, sensors_config, root_dir_path):
         save_dir_path = root_dir_path + f"/rsu_{index}"
-        super().__init__(index, sensors_config, actor, save_dir_path)
+        super().__init__(index, sensors_config, actor, save_dir_path, f"rsu_{index}")
 
     def _attach_sensors(self):
         self._attach_sensor("camera")

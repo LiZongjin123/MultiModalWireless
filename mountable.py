@@ -6,8 +6,9 @@ import yaml
 from utils import Utils
 
 class Mountable(ABC):
-    def __init__(self, index, sensors_config, actor, save_dir_path):
+    def __init__(self, index, sensors_config, actor, save_dir_path, name):
         self._index = index
+        self._name = name
         self._sensors_config = sensors_config
         self._world = actor.get_world()
         self._blueprint_library = self._world.get_blueprint_library()
@@ -98,7 +99,7 @@ class Mountable(ABC):
         frame_id = self._world.get_snapshot().frame
 
         data = {
-            "actor": f"rsu_{self._index}",
+            "actor": self._name,
             "frame": frame_id,
             "sensors": yaml_data_of_sensors,
             "actors": yaml_data_of_actors
