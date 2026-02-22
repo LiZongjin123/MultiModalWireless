@@ -10,8 +10,8 @@ class BlenderScript:
         self.__fbx_models_dir = fbx_models_dir
         self.__is_insert_key_frames = True
         self.__output_dir = output_dir
-        self.__keep_materials = {"itu_metal", "itu_very_dry_ground_28", "itu_marble",
-                                 "itu_concrete", "itu_glass", "itu_medium_dry_ground_28"}
+        self.__keep_materials = {"itu_metal", "itu_very_dry_ground", "itu_marble",
+                                 "itu_concrete", "itu_glass", "itu_medium_dry_ground"}
     def init(self):
         self.__load_scene()
         os.makedirs(self.__output_dir, exist_ok=True)

@@ -3,7 +3,8 @@ import sionna
 import tensorflow as tf
 import numpy as np
 import yaml
-from sionna.rt import safe_atan2
+import drjit as dr
+import mitsuba as mi
 
 class SionnaScript:
     def __init__(self, gpu_num, carla_output_dir_path, blender_output_dir_path, scenario_config,
@@ -21,7 +22,7 @@ class SionnaScript:
         os.environ["CUDA_VISIBLE_DEVICES"] = f"{self.__gpu_num}"
         gpus = tf.config.list_physical_devices("GPU")
         tf.config.experimental.set_memory_growth(gpus[0], True)
-        self.__sionna_config = {"tx_row": 1, "tx_col": 16, "rx_row": 1, "rx_col": 16, "fc": 28e9}
+        self.__sionna_config = {"tx_row": 1, "tx_col": 16, "rx_row": 1, "rx_col": 16, "fc": 5e9}
 
         cav_num = len(self.__scenario_config["actors"]["desired_cav_ranks"])
         os.makedirs(self.__sionna_output_dir_path, exist_ok=True)
@@ -32,11 +33,10 @@ class SionnaScript:
     def generate_channel_data(self):
         mitsuba_scene_files = sorted([file for file in os.listdir(self.__blender_output_dir_path) if file.endswith(".xml")])
 
-        for mitsuba_scene_file in mitsuba_scene_files:
-            frame_id = os.path.splitext(mitsuba_scene_file)[0]
-            sionna_scene = sionna.rt.load_scene(mitsuba_scene_file)
-
-            self.__add_radio_materio(sionna_scene)
+        for mitsuba_scene_file_name in mitsuba_scene_files:
+            frame_id = os.path.splitext(mitsuba_scene_file_name)[0]
+            mitsuba_scene_file_path = os.path.join(self.__blender_output_dir_path, mitsuba_scene_file_name)
+            sionna_scene = sionna.rt.load_scene(mitsuba_scene_file_path)
 
             self.__set_planar_array(sionna_scene)
 
@@ -59,7 +59,8 @@ class SionnaScript:
                                         orientation=cav_planar_array_pose["orientation"])
                 sionna_scene.add(rx)
 
-                paths = sionna_scene.compute_paths(max_depth=1, num_samples=1e6)
+                solver = sionna.rt.PathSolver()
+                paths = solver(sionna_scene, max_depth=1)
                 a, tau = paths.cir()
                 theta_t, phi_t = SionnaScript.__aod_transform(paths.theta_t, paths.phi_t,
                                                               rsu_planar_array_pose["orientation"])
@@ -86,68 +87,68 @@ class SionnaScript:
             sionna_scene.remove(tx.name)
             print(f"frame_id: {frame_id}")
 
-
     @staticmethod
     def __aod_transform(global_theta, global_phi, planar_array_orientation):
+        global_theta = dr.ravel(global_theta)
+        global_phi = dr.ravel(global_phi)
         path_global_orientation = sionna.rt.r_hat(global_theta, global_phi)
 
-        planar_array_orientation_tensor = tf.convert_to_tensor(planar_array_orientation, dtype=tf.float32)
-        rotation_matrix = tf.transpose(sionna.rt.rotation_matrix(planar_array_orientation_tensor))
-        rotation_matrix = sionna.rt.expand_to_rank(rotation_matrix, tf.rank(path_global_orientation) + 1, 0)
-        path_local_orientation = tf.linalg.matvec(rotation_matrix, path_global_orientation)
+        planar_array_orientation = mi.Point3f(planar_array_orientation)
+        rotation_matrix = sionna.rt.rotation_matrix(planar_array_orientation)
+        path_local_orientation = rotation_matrix @ path_global_orientation
 
         local_theta, local_phi = sionna.rt.theta_phi_from_unit_vec(path_local_orientation)
         return local_theta, local_phi
 
     def __set_planar_array(self, sionna_scene):
-        sionna_scene.tx_array = sionna.rt.PlanarArray(num_rows=self.__sionna_config["tx_rows"],
-                                                      num_cols=self.__sionna_config["tx_cols"],
+        sionna_scene.tx_array = sionna.rt.PlanarArray(num_rows=self.__sionna_config["tx_row"],
+                                                      num_cols=self.__sionna_config["tx_col"],
                                                       vertical_spacing=0.5,
                                                       horizontal_spacing=0.5,
                                                       pattern="dipole",
                                                       polarization="V")
 
-        sionna_scene.rx_array = sionna.rt.PlanarArray(num_rows=self.__sionna_config["rx_rows"],
-                                                      num_cols=self.__sionna_config["rx_cols"],
+        sionna_scene.rx_array = sionna.rt.PlanarArray(num_rows=self.__sionna_config["rx_row"],
+                                                      num_cols=self.__sionna_config["rx_col"],
                                                       vertical_spacing=0.5,
                                                       horizontal_spacing=0.5,
                                                       pattern="dipole",
                                                       polarization="V")
 
     def __add_radio_materio(self, sionna_scene):
-        itu_wet_ground_28 = sionna.rt.RadioMaterial("itu_wet_ground_28",
+        custom_itu_wet_ground_28 = sionna.rt.RadioMaterial("itu_wet_ground_28",
                                                     relative_permittivity=3,
                                                     conductivity=2.5,
                                                     scattering_coefficient=0.0,
                                                     xpd_coefficient=0.0,
                                                     scattering_pattern=sionna.rt.LambertianPattern(),
                                                     frequency_update_callback=None)
-        sionna_scene.add(itu_wet_ground_28)
+        sionna_scene.add(custom_itu_wet_ground_28)
 
-        itu_medium_dry_ground_28 = sionna.rt.RadioMaterial("itu_medium_dry_ground_28",
+        custom_itu_medium_dry_ground_28 = sionna.rt.RadioMaterial("itu_medium_dry_ground_28",
                                                            relative_permittivity=3,
                                                            conductivity=0.4,
                                                            scattering_coefficient=0.0,
                                                            xpd_coefficient=0.0,
                                                            scattering_pattern=sionna.rt.LambertianPattern())
-        sionna_scene.add(itu_medium_dry_ground_28)
+        sionna_scene.add(custom_itu_medium_dry_ground_28)
 
-        itu_very_dry_ground_28 = sionna.rt.RadioMaterial("itu_very_dry_ground_28",
+        custom_itu_very_dry_ground_28 = sionna.rt.RadioMaterial("itu_very_dry_ground_28",
                                                          relative_permittivity=2.5,
                                                          conductivity=0.03,
                                                          scattering_coefficient=0.0,
                                                          xpd_coefficient=0.0,
                                                          scattering_pattern=sionna.rt.LambertianPattern())
-        sionna_scene.add(itu_very_dry_ground_28)
+        sionna_scene.add(custom_itu_very_dry_ground_28)
 
     @staticmethod
     def __load_actor_planar_array_pose(actor_yaml_file_path):
         with open(actor_yaml_file_path, 'r', encoding="utf-8") as f:
             yaml_file_data = yaml.safe_load(f)
-        carla_lidar_location = yaml_file_data["sensor"]["lidar"]["location"]
-        carla_lidar_rotation = yaml_file_data["sensor"]["lidar"]["rotation"]
+        carla_lidar_location = yaml_file_data["sensors"]["lidar"]["location"]
+        carla_lidar_rotation = yaml_file_data["sensors"]["lidar"]["rotation"]
         sionna_lidar_location = [carla_lidar_location["x"],
-                                 -carla_lidar_rotation["y"],
+                                 -carla_lidar_location["y"],
                                  carla_lidar_location["z"]]
         sionna_lidar_rotation = [-carla_lidar_rotation["yaw"] * np.pi / 180,
                                  carla_lidar_rotation["pitch"] * np.pi / 180,
@@ -155,11 +156,6 @@ class SionnaScript:
         planar_array_pose = {"position": sionna_lidar_location,
                              "orientation": sionna_lidar_rotation}
         return planar_array_pose
-        # actor_name = yaml_file_data["actor"]
-        # if actor_name.startswith("rsu"):
-        # elif actor_name.startswith("cav"):
-        #     carla_cav_speed = yaml_file_data["sensors"]["cav_speed"]["speed"]
-        #     sionna_cav_speed = [carla_cav_speed["x"], -carla_cav_speed["y"], carla_cav_speed["z"]]
 
     @staticmethod
     def __paths_data_save(paths_data, paths_data_save_dir, frame_id):

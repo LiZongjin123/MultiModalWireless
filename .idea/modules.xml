@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/WirelessDataset.iml" filepath="$PROJECT_DIR$/.idea/WirelessDataset.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/MultiModalWireless.iml" filepath="$PROJECT_DIR$/.idea/MultiModalWireless.iml" />
     </modules>
   </component>
 </project>
