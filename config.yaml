@@ -1,5 +1,6 @@
 scenario: "Town03_gastation"
 # spawn_center = carla.Location()
+output_path: "/mnt/d/output"
 
 simulation:
   seed: 40

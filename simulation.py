@@ -18,8 +18,10 @@ class Simulation:
         self.__simulation_config = self.__config["simulation"]
         self.__seed = self.__config["simulation"]["seed"]
 
-        self.__save_dir_path = "./" + self.__config["output"]["root_dir_template"].format(scenario_name=scenario_name,
-                                                                                          seed=self.__seed)
+        # self.__save_dir_path = "./" + self.__config["output"]["root_dir_template"].format(scenario_name=scenario_name,
+        #                                                                                   seed=self.__seed)
+        self.__save_dir_path = self.__config["output_path"]
+
         self.__scene_save_dir_path = self.__save_dir_path + "/scene"
 
         self.__blueprint_library = None

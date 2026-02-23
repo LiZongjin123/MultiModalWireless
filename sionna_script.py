@@ -171,10 +171,10 @@ with open(config_path, "r") as f:
 scenario_name = config["scenario"]
 scenario_config = config["scenarios"][scenario_name]
 sionna_script = SionnaScript(0,
-                             "./Town03_gastation_seed40",
-                             "./blender_output",
+                             "/mnt/d/output",
+                             "/mnt/d/blender_output",
                              scenario_config,
-                             "./sionna_output")
+                             "/mnt/d/sionna_output")
 sionna_script.init()
 sionna_script.generate_channel_data()
 

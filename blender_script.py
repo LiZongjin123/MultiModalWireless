@@ -129,8 +129,8 @@ class BlenderScript:
             self.__export_mitsuba_scene(frame_id)
             current_blender_frame += 1
 
-blender_script = BlenderScript("C:\\Users\\25756\\PycharmProjects\\WirelessDataset\\Town03_gastation_seed40\\scene",
-                               "C:\\Users\\25756\\PycharmProjects\\WirelessDataset\\actors",
-                               "C:\\Users\\25756\\PycharmProjects\\WirelessDataset\\blender_output")
+blender_script = BlenderScript(r"D:\output\scene",
+                               r"D:\actors",
+                               r"D:\blender_output")
 blender_script.init()
 blender_script.main_script()
