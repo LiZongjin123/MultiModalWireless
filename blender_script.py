@@ -4,17 +4,17 @@ import bpy
 import yaml
 
 class BlenderScript:
-    def __init__(self, scene_dir, fbx_models_dir, output_dir):
+    def __init__(self, scene_dir, fbx_models_dir, blender_output_dir):
         self.__scene_dir = scene_dir
         self.__all_scenes_data = {}
         self.__fbx_models_dir = fbx_models_dir
         self.__is_insert_key_frames = True
-        self.__output_dir = output_dir
+        self.__blender_output_dir = blender_output_dir
         self.__keep_materials = {"itu_metal", "itu_very_dry_ground", "itu_marble",
                                  "itu_concrete", "itu_glass", "itu_medium_dry_ground"}
     def init(self):
         self.__load_scene()
-        os.makedirs(self.__output_dir, exist_ok=True)
+        os.makedirs(self.__blender_output_dir, exist_ok=True)
 
     def __load_scene(self):
         scene_files = os.listdir(self.__scene_dir)
@@ -82,7 +82,7 @@ class BlenderScript:
             bpy.data.materials.remove(material)
 
     def __export_mitsuba_scene(self, frame_id):
-        output_file_path = os.path.join(self.__output_dir, f"{frame_id}.xml")
+        output_file_path = os.path.join(self.__blender_output_dir, f"{frame_id}.xml")
         bpy.ops.export_scene.mitsuba(
             filepath=output_file_path,
             export_ids=True,
@@ -129,8 +129,12 @@ class BlenderScript:
             self.__export_mitsuba_scene(frame_id)
             current_blender_frame += 1
 
-blender_script = BlenderScript(r"D:\output\scene",
-                               r"D:\actors",
-                               r"D:\blender_output")
+scene_dir = r"D:\output\carla_output\scene"
+fbx_models_dir = r"D:\actors"
+blender_output_dir = r"D:\output\blender_output"
+
+blender_script = BlenderScript(scene_dir,
+                               fbx_models_dir,
+                               blender_output_dir)
 blender_script.init()
 blender_script.main_script()

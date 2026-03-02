@@ -17,34 +17,9 @@ class Mountable(ABC):
         self._save_dir_path = save_dir_path
         self._actor = actor
 
-    def init(self, need_attach_sensors):
+    def init(self):
         os.makedirs(self._save_dir_path, exist_ok=True)
-        if need_attach_sensors:
-            self._attach_sensors()
-
-    @abstractmethod
-    def _attach_sensors(self):
-        pass
-
-    def _attach_sensor(self, sensor_name):
-        sensor_config = self._sensors_config[sensor_name]
-        sensor_transform_config = sensor_config["transform"]
-        sensor_transforms = {}
-        if "location" in sensor_transform_config:
-            sensor_transforms[sensor_name] = Utils.get_transform(sensor_transform_config)
-        else:
-            sensor_transforms = Utils.get_transforms(sensor_transform_config)
-        for sensor_name_, sensor_transform in sensor_transforms.items():
-            sensor_blueprint = self._blueprint_library.find(sensor_config["blueprint"])
-
-            sensor_attributes = sensor_config["attributes"]
-            for key, value in sensor_attributes.items():
-                sensor_blueprint.set_attribute(key, str(value))
-
-            sensor = self._world.spawn_actor(sensor_blueprint, sensor_transform, attach_to=self._actor)
-            self._sensor_queues[sensor_name_] = queue.Queue()
-            sensor.listen(self._sensor_queues[sensor_name_].put)
-            self._sensors[sensor_name_] = sensor
+        self._attach_sensors()
 
     def destroy(self):
         for sensor in self._sensors.values():
@@ -59,6 +34,24 @@ class Mountable(ABC):
     @abstractmethod
     def save_data(self, actors):
         pass
+
+    @abstractmethod
+    def _attach_sensors(self):
+        pass
+
+    def _attach_sensor(self, sensor_name):
+        sensor_config = self._sensors_config[sensor_name]
+
+        sensor_blueprint = self._blueprint_library.find(sensor_config["blueprint"])
+        sensor_attributes = sensor_config["attributes"]
+        for key, value in sensor_attributes.items():
+            sensor_blueprint.set_attribute(key, str(value))
+        sensor_transform_config = sensor_config["transform"]
+        sensor_transform = Utils.get_transform(sensor_transform_config)
+        sensor = self._world.spawn_actor(sensor_blueprint, sensor_transform, attach_to=self._actor)
+        self._sensor_queues[sensor_name] = queue.Queue()
+        sensor.listen(self._sensor_queues[sensor_name].put)
+        self._sensors[sensor_name] = sensor
 
     def _lidar_saving(self):
         lidar_measurement = self._sensor_queues["lidar"].get()

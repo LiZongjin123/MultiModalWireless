@@ -7,7 +7,10 @@ class Cav(Mountable):
         super().__init__(index, sensors_config, actor, save_dir_path, f"cav_{index}")
 
     def _attach_sensors(self):
-        self._attach_sensor("camera")
+        self._attach_sensor("camera0")
+        self._attach_sensor("camera1")
+        self._attach_sensor("camera2")
+        self._attach_sensor("camera3")
         self._attach_sensor("lidar")
         self._attach_sensor("imu")
 
