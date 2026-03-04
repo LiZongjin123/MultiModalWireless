@@ -1,7 +1,7 @@
 output_path: "/mnt/d/output"
 
 simulation:
-  is_synchronous_mode: True
+  is_synchronous_mode: False
   frame_rate: 10
   warmup_seconds: 0.7
   duration_seconds: 8
@@ -46,6 +46,7 @@ scenario:
   # Locations for each RSU, identified by their index
   rsu_transform:
     - { location: {x: -19, y: 184, z: 0}, rotation: {yaw: -30, roll: 0, pitch: 0} }
+    - { location: {x: -35, y: 186, z: 0}, rotation: {yaw: 223.65, roll: 0, pitch: 0} }
 
 # Sensor definitions, attributes, and relative placements
 sensors:
@@ -160,5 +161,31 @@ sensors:
         location: {x: 0, y: 0, z: 4.1}
         rotation: {yaw: -90, pitch: 0, roll: 0}
 
-sionna:
+sionna_simulation:
   gpu_num: 0
+  planar_array_tx:
+    num_rows: 1
+    num_cols: 16
+    vertical_spacing: 0.5
+    horizontal_spacing: 0.5
+    pattern: "dipole"
+    polarization: "V"
+  planar_array_rx:
+    num_rows: 1
+    num_cols: 16
+    vertical_spacing: 0.5
+    horizontal_spacing: 0.5
+    pattern: "dipole"
+    polarization: "V"
+  fc: 5000000000
+  num_subcarriers: 128
+  subcarrier_spacing: 30000
+  paths_solver:
+    max_depth: 1
+    max_num_paths_per_src: 1000000
+    samples_per_src: 1000000
+    synthetic_array: True
+  cir:
+    num_time_steps: 3
+  cfr:
+    num_time_steps: 3

@@ -1,7 +1,6 @@
 import json
-
 import carla
-from mountable import Mountable
+from package.mountable import Mountable
 
 class Rsu(Mountable):
 
@@ -15,12 +14,12 @@ class Rsu(Mountable):
         self._attach_sensor("lidar")
         self._attach_sensor("radar")
 
-    def save_data(self, actors):
+    def save_data(self):
         self._camera_saving()
         self._depth_camera_saving()
         self._lidar_saving()
         self._radar_saving()
-        self._yaml_data_saving(actors)
+        self._yaml_data_saving()
 
     def _camera_saving(self):
         image = self._sensor_queues["camera"].get()
@@ -48,9 +47,9 @@ class Rsu(Mountable):
 
     def _generate_yaml_data_of_sensors(self):
         yaml_data_of_sensor_poses = self._generate_yaml_data_of_all_sensor_poses()
-        yaml_data_of_self_actor_pose = self._generate_yaml_data_of_self_actor_pose()
+        yaml_data_of_self_actor = self._generate_yaml_data_of_self_actor()
 
         yaml_data_of_sensors = yaml_data_of_sensor_poses
-        yaml_data_of_sensors["rsu_pose"] = yaml_data_of_self_actor_pose
+        yaml_data_of_sensors["rsu"] = yaml_data_of_self_actor
 
         return yaml_data_of_sensors

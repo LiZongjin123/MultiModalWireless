@@ -3,7 +3,7 @@ import queue
 import struct
 from abc import ABC, abstractmethod
 import yaml
-from utils import Utils
+from package.utils import Utils
 
 class Mountable(ABC):
     def __init__(self, index, sensors_config, actor, save_dir_path, name):
@@ -32,7 +32,7 @@ class Mountable(ABC):
             data = sensor_queue.get()
 
     @abstractmethod
-    def save_data(self, actors):
+    def save_data(self):
         pass
 
     @abstractmethod
@@ -85,17 +85,15 @@ class Mountable(ABC):
         with open(pcd_file_path, 'w', encoding='utf-8') as f:
             f.write(pcd_content)
 
-    def _yaml_data_saving(self, actors):
+    def _yaml_data_saving(self):
         yaml_data_of_sensors = self._generate_yaml_data_of_sensors()
-        yaml_data_of_actors = Utils.generate_yaml_data_of_actors(actors, self._actor)
 
         frame_id = self._world.get_snapshot().frame
 
         data = {
             "actor": self._name,
             "frame": frame_id,
-            "sensors": yaml_data_of_sensors,
-            "actors": yaml_data_of_actors
+            "sensors": yaml_data_of_sensors
         }
 
         yaml_file_path = self._save_dir_path + f"/{frame_id}.yaml"
@@ -114,7 +112,11 @@ class Mountable(ABC):
             yaml_data_of_all_sensor_poses[sensor_name] = yaml_data_of_sensor_pose
         return yaml_data_of_all_sensor_poses
 
-    def _generate_yaml_data_of_self_actor_pose(self):
+    def _generate_yaml_data_of_self_actor(self):
         self_actor_transform = self._actor.get_transform()
-        yaml_data_of_self_actor_pose = Utils.generate_yaml_data_of_actor_pose(self_actor_transform)
-        return yaml_data_of_self_actor_pose
+        yaml_data_of_self_actor = Utils.generate_yaml_data_of_actor_pose(self_actor_transform)
+
+        self_actor_speed = self._actor.get_velocity()
+        yaml_data_of_self_actor["speed"] = Utils.generate_yaml_data_of_actor_speed(self_actor_speed)
+
+        return yaml_data_of_self_actor

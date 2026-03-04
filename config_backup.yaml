@@ -1,8 +1,7 @@
-scenario: "Town03_gastation"
 output_path: "/mnt/d/output"
 
 simulation:
-  seed: 40
+  is_synchronous_mode: False
   frame_rate: 10
   warmup_seconds: 0.7
   duration_seconds: 8
@@ -39,36 +38,55 @@ simulation:
     - "vehicle.mini.cooper_s"
     - "vehicle.nissan.patrol_2021"
 
-output:
-  root_dir_template: "{scenario_name}_seed{seed}"
-
-scenarios:
-  Town03_gastation:
-    map: "Town03"
-    actors:
-      num_vehicles: 20
-      num_rsu: 1
-      # Ranks of vehicles (sorted by distance to spawn_center) to be selected as CAVs
-      desired_cav_ranks: [0, 1, 5]
-    spawn_center: {x: -28, y: 164, z: 0}
-    # Locations for each RSU, identified by their index
-    rsu_transform:
-      - { location: {x: -19, y: 184, z: 0}, rotation: {yaw: -30, roll: 0, pitch: 0} }
+scenario:
+  map: "Town03"
+  # Ranks of vehicles (sorted by distance to spawn_center) to be selected as CAVs
+  desired_cav_ranks: [0, 1, 5]
+  spawn_center: {x: -28, y: 164, z: 0}
+  # Locations for each RSU, identified by their index
+  rsu_transform:
+    - { location: {x: -19, y: 184, z: 0}, rotation: {yaw: -30, roll: 0, pitch: 0} }
+    - { location: {x: -35, y: 186, z: 0}, rotation: {yaw: 223.65, roll: 0, pitch: 0} }
 
 # Sensor definitions, attributes, and relative placements
 sensors:
   cav:
-    camera:
+    camera0:
       blueprint: "sensor.camera.rgb"
       attributes:
         image_size_x: '640'
         image_size_y: '480'
         fov: '110'
-      transform: # Names (camera0, etc.) are used for file/folder naming
-        camera0: { location: {x: 1.5, y: 0.0, z: 2.4}, rotation: {yaw: 0, roll: 0, pitch: 0} }
-        camera1: { location: {x: -1.5, y: 0.0, z: 2.4}, rotation: {yaw: 180, roll: 0, pitch: 0} }
-        camera2: { location: {x: 0.0, y: -0.7, z: 2.4}, rotation: {yaw: -90, roll: 0, pitch: 0} }
-        camera3: { location: {x: 0.0, y: 0.7, z: 2.4}, rotation: {yaw: 90, roll: 0, pitch: 0} }
+      transform:
+        location: {x: 1.5, y: 0.0, z: 2.4}
+        rotation: {yaw: 0, roll: 0, pitch: 0}
+    camera1:
+      blueprint: "sensor.camera.rgb"
+      attributes:
+        image_size_x: '640'
+        image_size_y: '480'
+        fov: '110'
+      transform:
+        location: {x: -1.5, y: 0.0, z: 2.4}
+        rotation: {yaw: 180, roll: 0, pitch: 0}
+    camera2:
+      blueprint: "sensor.camera.rgb"
+      attributes:
+        image_size_x: '640'
+        image_size_y: '480'
+        fov: '110'
+      transform:
+        location: {x: 0.0, y: -0.7, z: 2.4}
+        rotation: {yaw: -90, roll: 0, pitch: 0}
+    camera3:
+      blueprint: "sensor.camera.rgb"
+      attributes:
+        image_size_x: '640'
+        image_size_y: '480'
+        fov: '110'
+      transform:
+        location: {x: 0.0, y: 0.7, z: 2.4}
+        rotation: {yaw: 90, roll: 0, pitch: 0}
     lidar:
       blueprint: "sensor.lidar.ray_cast"
       attributes:
@@ -80,7 +98,9 @@ sensors:
         lower_fov: '-25'
         dropoff_general_rate: '0.0'
         dropoff_intensity_limit: '1.0'
-      transform: { location: {x: 0.0, y: 0.0, z: 2.5}, rotation: {yaw: 0, roll: 0, pitch: 0} }
+      transform:
+        location: {x: 0.0, y: 0.0, z: 2.5}
+        rotation: {yaw: 0, roll: 0, pitch: 0}
     imu:
       blueprint: "sensor.other.imu"
       attributes:
@@ -94,7 +114,9 @@ sensors:
         noise_gyro_bias_y: '0.001'
         noise_gyro_bias_z: '0.001'
         noise_seed: '42'
-      transform: { location: {x: 0.0, y: 0.0, z: 0.0}, rotation: {yaw: 0, roll: 0, pitch: 0} }
+      transform:
+        location: {x: 0.0, y: 0.0, z: 0.0}
+        rotation: {yaw: 0, roll: 0, pitch: 0}
   rsu:
     camera:
       blueprint: "sensor.camera.rgb"
@@ -102,14 +124,18 @@ sensors:
         image_size_x: '640'
         image_size_y: '480'
         fov: '110'
-      transform: { location: {x: 0, y: 0, z: 3.9}, rotation: {pitch: 0, yaw: -90, roll: 0} }
+      transform:
+        location: {x: 0, y: 0, z: 3.9}
+        rotation: {pitch: 0, yaw: -90, roll: 0}
     depth_camera:
       blueprint: "sensor.camera.depth"
       attributes:
         image_size_x: '640'
         image_size_y: '480'
         fov: '110'
-      transform: { location: {x: 0, y: 0, z: 3.9}, rotation: {pitch: 0, yaw: -90, roll: 0} }
+      transform:
+        location: {x: 0, y: 0, z: 3.9}
+        rotation: {pitch: 0, yaw: -90, roll: 0}
     lidar:
       blueprint: "sensor.lidar.ray_cast"
       attributes:
@@ -121,7 +147,9 @@ sensors:
         lower_fov: '-25'
         dropoff_general_rate: '0.0'
         dropoff_intensity_limit: '1.0'
-      transform: { location: {x: 0, y: 0, z: 4}, rotation: {pitch: 0, yaw: -90, roll: 0} }
+      transform:
+        location: {x: 0, y: 0, z: 4}
+        rotation: {pitch: 0, yaw: -90, roll: 0}
     radar:
       blueprint: "sensor.other.radar"
       attributes:
@@ -129,5 +157,35 @@ sensors:
         vertical_fov: '30'
         range: '100'
         points_per_second: '200000'
-      transform: { location: {x: 0, y: 0, z: 4.1}, rotation: {yaw: -90, pitch: 0, roll: 0} }
+      transform:
+        location: {x: 0, y: 0, z: 4.1}
+        rotation: {yaw: -90, pitch: 0, roll: 0}
 
+sionna_simulation:
+  gpu_num: 0
+  planar_array_tx:
+    num_rows: 1
+    num_cols: 16
+    vertical_spacing: 0.5
+    horizontal_spacing: 0.5
+    pattern: "dipole"
+    polarization: "V"
+  planar_array_rx:
+    num_rows: 1
+    num_cols: 16
+    vertical_spacing: 0.5
+    horizontal_spacing: 0.5
+    pattern: "dipole"
+    polarization: "V"
+  fc: 5000000000
+  num_subcarriers: 128
+  subcarrier_spacing: 30000
+  paths_solver:
+    max_depth: 1
+    max_num_paths_per_src: 1000000
+    samples_per_src: 1000000
+    synthetic_array: True
+  cir:
+    num_time_steps: 3
+  cfr:
+    num_time_steps: 3

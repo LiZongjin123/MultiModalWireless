@@ -1,9 +1,9 @@
 import os
 import carla
 import yaml
-from cav import Cav
-from rsu import Rsu
-from utils import Utils
+from package.cav import Cav
+from package.rsu import Rsu
+from package.utils import Utils
 
 class CarlaSimulation:
     def __init__(self):
@@ -21,37 +21,33 @@ class CarlaSimulation:
         self.__cavs = []
         self.__rsus = []
         self.__spawn_center = None
-        self.__spectator = None
-        self.__is_synchronous_mode = None
 
     def init(self, config_path):
         with open(config_path, "r") as f:
             self.__config = yaml.safe_load(f)
         self.__scenario_config = self.__config["scenario"]
         self.__simulation_config = self.__config["simulation"]
-        self.__save_dir_path = os.path.join(self.__config["output_path"], "carla_output")
-        self.__scene_save_dir_path = os.path.join(self.__save_dir_path, "scene")
         self.__spawn_center = carla.Location(x=self.__scenario_config["spawn_center"]["x"],
                                              y=self.__scenario_config["spawn_center"]["y"],
                                              z=self.__scenario_config["spawn_center"]["z"])
+        self.__save_dir_path = os.path.join(self.__config["output_path"], "carla_output")
+        self.__scene_save_dir_path = os.path.join(self.__save_dir_path, "scene")
 
         client_timeout = self.__simulation_config["client_timeout"]
         self.__client = carla.Client("localhost", 2000)
         self.__client.set_timeout(client_timeout)
-        print("Successfully connect to carla server.")
+        self.__traffic_manager = self.__client.get_trafficmanager(8000)
 
-        self.__world = self.__client.load_world(self.__scenario_config["map"])
+        self.__world = self.__client.get_world()
+        self.__blueprint_library = self.__world.get_blueprint_library()
 
+    def creat_save_dir(self):
         os.makedirs(self.__save_dir_path, exist_ok=True)
         os.makedirs(self.__scene_save_dir_path, exist_ok=True)
 
+    def set_map(self):
+        self.__world = self.__client.load_world(self.__scenario_config["map"])
         self.__blueprint_library = self.__world.get_blueprint_library()
-
-        self.__set_spectator()
-
-        self.__traffic_manager = self.__client.get_trafficmanager(8000)
-        self.__is_synchronous_mode = self.__simulation_config["is_synchronous_mode"]
-        print("Initialization finished.")
 
     def set_weather(self):
         weather_config = self.__simulation_config["weather"]
@@ -81,8 +77,6 @@ class CarlaSimulation:
             self.__road_signs.append(road_sign)
 
     def config_actors(self):
-        if not self.__is_synchronous_mode:
-            return
         desired_cav_ranks = self.__scenario_config["desired_cav_ranks"]
         for i in desired_cav_ranks:
             vehicle = self.__vehicles.pop(i)
@@ -96,12 +90,6 @@ class CarlaSimulation:
             self.__rsus.append(rsu)
         self.__road_signs = []
 
-    def set_running_mode(self):
-        if self.__is_synchronous_mode:
-            self.set_synchronous_running_mode()
-        else:
-            self.set_asynchronous_running_mode()
-
     def set_synchronous_running_mode(self):
         settings = self.__world.get_settings()
         frame_rate = self.__simulation_config["frame_rate"]
@@ -112,6 +100,7 @@ class CarlaSimulation:
 
     def set_asynchronous_running_mode(self):
         settings = self.__world.get_settings()
+        settings.fixed_delta_seconds = None
         settings.synchronous_mode = False
         self.__traffic_manager.set_synchronous_mode(False)
         self.__world.apply_settings(settings)
@@ -129,14 +118,58 @@ class CarlaSimulation:
                 actor.set_autopilot(False)
 
     def running(self):
+        settings = self.__world.get_settings()
+        synchronous_mode = settings.synchronous_mode
         try:
-            if self.__is_synchronous_mode:
+            if synchronous_mode:
                 self.__run_in_synchronous_mode()
             else:
                 while True:
                     pass
         except KeyboardInterrupt:
             pass
+
+    def set_top_down_view(self):
+        spectator_height = self.__simulation_config["spectator_height"]
+        spectator_location = carla.Location(x=self.__spawn_center.x,
+                                            y=self.__spawn_center.y,
+                                            z=spectator_height)
+        spectator_rotation = carla.Rotation(pitch=-90)
+        spectator_transform = carla.Transform(spectator_location, spectator_rotation)
+        spectator = self.__world.get_spectator()
+        spectator.set_transform(spectator_transform)
+
+    def set_spectator_at_spawn_center(self):
+        spectator_location = carla.Location(x=self.__spawn_center.x,
+                                            y=self.__spawn_center.y,
+                                            z=self.__spawn_center.z)
+        spectator = self.__world.get_spectator()
+        spectator.set_location(spectator_location)
+
+    def place_rsu_in_spectator_place(self):
+        spectator = self.__world.get_spectator()
+        spectator_transform = spectator.get_transform()
+
+        spawn_point = spectator_transform
+        spawn_point.location.z = 0.0
+        spawn_point.rotation.yaw += 90.0
+        spawn_point.rotation.roll = 0.0
+        spawn_point.rotation.pitch = 0.0
+        road_sign_blueprint = self.__blueprint_library.find('static.prop.trafficwarning')
+        road_sign = self.__world.spawn_actor(road_sign_blueprint, spawn_point)
+        self.__road_signs.append(road_sign)
+        print("rsu transform:")
+        print(f"x: {spawn_point.location.x}, y: {spawn_point.location.y}, z: {spawn_point.location.z}")
+        print(f"yaw: {spawn_point.rotation.yaw}, roll: {spawn_point.rotation.roll}, pitch: {spawn_point.rotation.pitch}")
+
+    def print_current_spectator_transform(self):
+        spectator = self.__world.get_spectator()
+        spectator_transform = spectator.get_transform()
+        spectator_location = spectator_transform.location
+        spectator_rotation = spectator_transform.rotation
+        print("spectator transform:")
+        print(f"x: {spectator_location.x}, y: {spectator_location.y}, z: {spectator_location.z}")
+        print(f"yaw: {spectator_rotation.yaw}, roll: {spectator_rotation.roll}, pitch: {spectator_rotation.pitch}")
 
     def __run_in_synchronous_mode(self):
         warmup_seconds = self.__simulation_config["warmup_seconds"]
@@ -155,25 +188,13 @@ class CarlaSimulation:
             print(f"frame_id: {frame_id}")
             time += fixed_delta_seconds
 
-    def __set_spectator(self):
-        spectator_height = self.__simulation_config["spectator_height"]
-
-        self.__spectator = self.__world.get_spectator()
-        spectator_location = carla.Location(x=self.__spawn_center.x,
-                                            y=self.__spawn_center.y,
-                                            z=spectator_height)
-        spectator_rotation = carla.Rotation(pitch=-90)
-        spectator_transform = carla.Transform(spectator_location, spectator_rotation)
-        self.__spectator.set_transform(spectator_transform)
-
     def __warmup(self):
         for actor in self.__cavs + self.__rsus:
             actor.warmup()
 
     def __save_data(self):
-        actors = self.__vehicles + self.__road_signs + self.__cavs + self.__rsus
         for actor in self.__cavs + self.__rsus:
-            actor.save_data(actors)
+            actor.save_data()
         self.__scene_yaml_data_saving()
 
     def __scene_yaml_data_saving(self):

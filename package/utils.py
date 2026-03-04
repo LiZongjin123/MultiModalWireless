@@ -1,7 +1,5 @@
 import math
-
 import carla
-
 
 class Utils:
     @staticmethod
@@ -53,6 +51,15 @@ class Utils:
         return yaml_data
 
     @staticmethod
+    def generate_yaml_data_of_actor_speed(speed):
+        yaml_data = {
+            "x": speed.x,
+            "y": speed.y,
+            "z": speed.z
+        }
+        return yaml_data
+
+    @staticmethod
     def _generate_yaml_data_of_actor(actor):
         actor_color = actor.attributes.get("color")
         if actor_color is None:
@@ -65,12 +72,12 @@ class Utils:
         actor_center = actor_bounding_box.location
         actor_extent = actor_bounding_box.extent
 
-        actor_speed_l2_norm = Utils.speed_l2_norm(actor.get_velocity())
+        actor_speed = Utils.generate_yaml_data_of_actor_speed(actor.get_velocity())
 
         yaml_data_of_actor = {
             "bp_id": actor.type_id,
             "color": actor_color,
-            "speed": actor_speed_l2_norm,
+            "speed": actor_speed,
             "location": actor_pose["location"],
             "rotation": actor_pose["rotation"],
             "center": {

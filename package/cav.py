@@ -1,4 +1,4 @@
-from mountable import Mountable
+from package.mountable import Mountable
 
 class Cav(Mountable):
 
@@ -22,10 +22,10 @@ class Cav(Mountable):
             image = self._sensor_queues[f"camera{i}"].get()
             image.save_to_disk(f"{self._save_dir_path}/{image.frame}_camera{i}.png")
 
-    def save_data(self, actors):
+    def save_data(self):
         self._camera_saving()
         self._lidar_saving()
-        self._yaml_data_saving(actors)
+        self._yaml_data_saving()
 
     def _generate_yaml_data_of_cav_speed(self):
         cav_speed = self._actor.get_velocity()
@@ -60,13 +60,11 @@ class Cav(Mountable):
 
     def _generate_yaml_data_of_sensors(self):
         yaml_data_of_sensor_poses = self._generate_yaml_data_of_all_sensor_poses()
-        yaml_data_of_self_actor_pose = self._generate_yaml_data_of_self_actor_pose()
-        yaml_data_of_self_actor_speed = self._generate_yaml_data_of_cav_speed()
+        yaml_data_of_self_actor = self._generate_yaml_data_of_self_actor()
         yaml_data_of_imu_measurement = self._generate_yaml_data_of_imu_measurement()
 
         yaml_data_of_sensors = yaml_data_of_sensor_poses
-        yaml_data_of_sensors["cav_pose"] = yaml_data_of_self_actor_pose
-        yaml_data_of_sensors["cav_speed"] = yaml_data_of_self_actor_speed
+        yaml_data_of_sensors["cav"] = yaml_data_of_self_actor
         yaml_data_of_sensors["imu_measurement"] = yaml_data_of_imu_measurement
 
         return yaml_data_of_sensors

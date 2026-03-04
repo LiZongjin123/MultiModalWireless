@@ -8,10 +8,8 @@ class BlenderScript:
         self.__scene_dir = scene_dir
         self.__all_scenes_data = {}
         self.__fbx_models_dir = fbx_models_dir
-        self.__is_insert_key_frames = True
         self.__blender_output_dir = blender_output_dir
-        self.__keep_materials = {"itu_metal", "itu_very_dry_ground", "itu_marble",
-                                 "itu_concrete", "itu_glass", "itu_medium_dry_ground"}
+
     def init(self):
         self.__load_scene()
         os.makedirs(self.__blender_output_dir, exist_ok=True)
@@ -29,7 +27,7 @@ class BlenderScript:
 
     def __clean_previous_actors(self):
         for obj in bpy.data.objects:
-            if obj.name.startswith("Actor_"):
+            if obj.name.startswith("actor_"):
                 bpy.data.objects.remove(obj, do_unlink=True)
 
     def __import_fbx_model(self, fbx_model_path):
@@ -60,14 +58,8 @@ class BlenderScript:
             itu_material = bpy.data.materials.new(name=material_name)
             itu_material.use_nodes = True
 
-        def apply_material(target):
-            if target.type == 'MESH':
-                target.data.materials.clear()
-                target.data.materials.append(itu_material)
-
-        apply_material(actor)
-        for child in actor.children_recursive:
-            apply_material(child)
+        actor.data.materials.clear()
+        actor.data.materials.append(itu_material)
 
     def __remove_material_not_in_keep_materials(self):
         materials_to_remove = [material for material in bpy.data.materials if material.name not in self.__keep_materials]
@@ -109,7 +101,7 @@ class BlenderScript:
                 fbx_model_path = os.path.join(self.__fbx_models_dir, f"{actor_bp_id}.FBX")
                 fbx_model = self.__import_fbx_model(fbx_model_path)
 
-                fbx_model.name = f"Actor_{actor_id}"
+                fbx_model.name = f"actor_{actor_id}"
                 fbx_model_location, fbx_model_rotation = self.__pose_transform(actor_location, actor_rotation)
                 fbx_model.location = (fbx_model_location["x"],
                                       fbx_model_location["y"],
@@ -119,12 +111,6 @@ class BlenderScript:
                                             fbx_model_rotation["yaw"])
 
                 self.__replace_actor_materials(fbx_model)
-
-                if self.__is_insert_key_frames:
-                    fbx_model.keyframe_insert("location")
-                    fbx_model.keyframe_insert("rotation_euler")
-
-            self.__remove_material_not_in_keep_materials()
 
             self.__export_mitsuba_scene(frame_id)
             current_blender_frame += 1
