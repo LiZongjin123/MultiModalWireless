@@ -3,6 +3,10 @@ import os
 import bpy
 import yaml
 
+scene_dir = r"D:\output\carla_output\scene"
+fbx_models_dir = r"D:\actors"
+blender_output_dir = r"D:\output\blender_output"
+
 class BlenderScript:
     def __init__(self, scene_dir, fbx_models_dir, blender_output_dir):
         self.__scene_dir = scene_dir
@@ -114,10 +118,6 @@ class BlenderScript:
 
             self.__export_mitsuba_scene(frame_id)
             current_blender_frame += 1
-
-scene_dir = r"D:\output\carla_output\scene"
-fbx_models_dir = r"D:\actors"
-blender_output_dir = r"D:\output\blender_output"
 
 blender_script = BlenderScript(scene_dir,
                                fbx_models_dir,

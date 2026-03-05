@@ -3,9 +3,7 @@ root_path = ".."
 sys.path.append(root_path)
 
 from package.sionna_simulation import SionnaSimulation
-
-config_path = "../config.yaml"
-frame_id = 60561
+import argparse
 
 def print_npz_data_shape(npz_files):
     cir_a = npz_files["cir_a"]
@@ -25,8 +23,31 @@ def print_npz_data_shape(npz_files):
     print("phi_t shape", phi_t.shape)
     print("theta_r shape", theta_r.shape)
     print("phi_r shape", phi_r.shape)
+    print()
+
+parser = argparse.ArgumentParser()
+parser.add_argument("frame_id", type=int)
+parser.add_argument("-c", "--config", type=str)
+parser.add_argument("-k", "--key", nargs="+")
+parser.add_argument("-s", "--shape", action="store_true")
+args = parser.parse_args()
+
+frame_id = args.frame_id
+
+config_path = "../config.yaml"
+if args.config is not None:
+    config_path = args.config
 
 sionna_simulation = SionnaSimulation()
 sionna_simulation.init(config_path)
 npz_file = sionna_simulation.get_npz_file(frame_id)
-print_npz_data_shape(npz_file)
+
+if args.shape:
+    print_npz_data_shape(npz_file)
+
+if args.key is not None:
+    for key in args.key:
+        print(key + ":")
+        print(npz_file[key])
+        print()
+

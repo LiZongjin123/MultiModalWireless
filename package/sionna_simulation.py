@@ -1,6 +1,6 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import sionna
 import tensorflow as tf
@@ -87,6 +87,7 @@ class SionnaSimulation:
         npz_file_path = os.path.join(self.__sionna_output_dir_path, f"{frame_id}.npz")
         npz_file = np.load(npz_file_path)
         print("all keys: ", npz_file.files)
+        print()
         return npz_file
 
     def __get_paths_data(self, paths):
