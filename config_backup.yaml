@@ -189,3 +189,12 @@ sionna_simulation:
     num_time_steps: 3
   cfr:
     num_time_steps: 3
+
+sionna_materials:
+#  very_dry_ground:
+#    thickness: 0.1
+#    relative_permittivity: 3
+#    conductivity: 2.5
+#    scattering_coefficient: 0.0
+#    xpd_coefficient: 0.0
+#    scattering_pattern: lambertian

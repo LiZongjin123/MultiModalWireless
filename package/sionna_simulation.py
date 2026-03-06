@@ -49,6 +49,7 @@ class SionnaSimulation:
         mitsuba_scene_file_path = os.path.join(self.__blender_output_dir_path, mitsuba_scene_file_name)
         sionna_scene = sionna.rt.load_scene(mitsuba_scene_file_path)
 
+        self.__change_radio_materials(sionna_scene)
         self.__config_planar_array(sionna_scene)
         sionna_scene.frequency = self.__sionna_simulation_config["fc"]
         self.__generate_planar_array(frame_id, sionna_scene)
@@ -71,6 +72,7 @@ class SionnaSimulation:
             mitsuba_scene_file_path = os.path.join(self.__blender_output_dir_path, mitsuba_scene_file_name)
             sionna_scene = sionna.rt.load_scene(mitsuba_scene_file_path)
 
+            self.__change_radio_materials(sionna_scene)
             self.__config_planar_array(sionna_scene)
             sionna_scene.frequency = self.__sionna_simulation_config["fc"]
             self.__set_actors_speed(frame_id, sionna_scene)
@@ -185,31 +187,21 @@ class SionnaSimulation:
                                                       pattern=planar_array_rx_config["pattern"],
                                                       polarization=planar_array_rx_config["polarization"])
 
-    def __add_radio_materio(self, sionna_scene):
-        custom_itu_wet_ground_28 = sionna.rt.RadioMaterial("itu_wet_ground_28",
-                                                    relative_permittivity=3,
-                                                    conductivity=2.5,
-                                                    scattering_coefficient=0.0,
-                                                    xpd_coefficient=0.0,
-                                                    scattering_pattern=sionna.rt.LambertianPattern(),
-                                                    frequency_update_callback=None)
-        sionna_scene.add(custom_itu_wet_ground_28)
-
-        custom_itu_medium_dry_ground_28 = sionna.rt.RadioMaterial("itu_medium_dry_ground_28",
-                                                           relative_permittivity=3,
-                                                           conductivity=0.4,
-                                                           scattering_coefficient=0.0,
-                                                           xpd_coefficient=0.0,
-                                                           scattering_pattern=sionna.rt.LambertianPattern())
-        sionna_scene.add(custom_itu_medium_dry_ground_28)
-
-        custom_itu_very_dry_ground_28 = sionna.rt.RadioMaterial("itu_very_dry_ground_28",
-                                                         relative_permittivity=2.5,
-                                                         conductivity=0.03,
-                                                         scattering_coefficient=0.0,
-                                                         xpd_coefficient=0.0,
-                                                         scattering_pattern=sionna.rt.LambertianPattern())
-        sionna_scene.add(custom_itu_very_dry_ground_28)
+    def __change_radio_materials(self, sionna_scene):
+        sionna_materials_config = self.__config["sionna_materials"]
+        if sionna_materials_config is not None:
+            for name, args in sionna_materials_config.items():
+                radio_material = sionna.rt.RadioMaterial(name=name,
+                                                         thickness = args["thickness"],
+                                                         relative_permittivity=args["relative_permittivity"],
+                                                         conductivity=args["conductivity"],
+                                                         scattering_coefficient=args["scattering_coefficient"],
+                                                         xpd_coefficient=args["xpd_coefficient"],
+                                                         scattering_pattern=args["scattering_pattern"])
+                for obj in sionna_scene.objects.values():
+                    if hasattr(obj.radio_material, "itu_type") and obj.radio_material.itu_type == name:
+                        obj.radio_material = radio_material
+                sionna_scene.remove("itu_" + name)
 
     @staticmethod
     def __read_actor_planar_array_pose_and_velocity(actor_yaml_file_path):
