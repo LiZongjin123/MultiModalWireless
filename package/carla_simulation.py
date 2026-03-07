@@ -146,19 +146,31 @@ class CarlaSimulation:
         spectator = self.__world.get_spectator()
         spectator.set_location(spectator_location)
 
-    def place_rsu_in_spectator_place(self):
+    def place_actor_in_spectator_place(self, actor_type: str):
         spectator = self.__world.get_spectator()
         spectator_transform = spectator.get_transform()
 
         spawn_point = spectator_transform
-        spawn_point.location.z = 0.0
-        spawn_point.rotation.yaw += 90.0
+
+        if actor_type == "rsu":
+            spawn_point.rotation.yaw += 90.0
+            spawn_point.location.z = 0.0
+        elif actor_type == "cav":    
+            spawn_point.location.z = 0.3
         spawn_point.rotation.roll = 0.0
         spawn_point.rotation.pitch = 0.0
-        road_sign_blueprint = self.__blueprint_library.find('static.prop.trafficwarning')
-        road_sign = self.__world.spawn_actor(road_sign_blueprint, spawn_point)
-        self.__road_signs.append(road_sign)
-        print("rsu transform:")
+
+        if actor_type == "rsu":
+            actor_blueprint = self.__blueprint_library.find('static.prop.trafficwarning')
+        elif actor_type == "cav":
+            actor_blueprint = self.__blueprint_library.find("vehicle.tesla.model3")
+        actor = self.__world.spawn_actor(actor_blueprint, spawn_point)
+
+        if actor_type == "rsu":
+            self.__road_signs.append(actor)
+        elif actor_type == "cav":
+            self.__vehicles.append(actor)
+        print("actor transform:")
         print(f"x: {spawn_point.location.x}, y: {spawn_point.location.y}, z: {spawn_point.location.z}")
         print(f"yaw: {spawn_point.rotation.yaw}, roll: {spawn_point.rotation.roll}, pitch: {spawn_point.rotation.pitch}")
 

@@ -18,30 +18,11 @@ simulation:
     rayleigh_scattering_scale: 0.0331
   preferred_vehicles:
     - "vehicle.tesla.model3"
-    - "vehicle.audi.etron"
-    - "vehicle.mercedes.coupe"
-    - "vehicle.mini.cooper_s_2021"
-    - "vehicle.nissan.micra"
-    - "vehicle.bmw.grandtourer"
-    - "vehicle.chevrolet.impala"
-    - "vehicle.dodge.charger_police"
-    - "vehicle.ford.mustang"
-    - "vehicle.jeep.wrangler_rubicon"
-    - "vehicle.lincoln.mkz_2017"
-    - "vehicle.toyota.prius"
-    - "vehicle.audi.tt"
-    - "vehicle.tesla.cybertruck"
-    - "vehicle.nissan.patrol"
-    - "vehicle.audi.a2"
-    - "vehicle.lincoln.mkz_2020"
-    - "vehicle.mercedes.coupe_2020"
-    - "vehicle.mini.cooper_s"
-    - "vehicle.nissan.patrol_2021"
 
 scenario:
   map: "Town03"
   # Ranks of vehicles (sorted by distance to spawn_center) to be selected as CAVs
-  desired_cav_ranks: [0, 1, 5]
+  desired_cav_ranks: [0]
   spawn_center: {x: -28, y: 164, z: 0}
   # Locations for each RSU, identified by their index
   rsu_transform:
